@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DermaScan AI · Vitiligo Detector</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1020; --card:rgba(255,255,255,.06); --border:rgba(255,255,255,.12);
+    --text:#eef1ff; --muted:#9aa4c7; --a:#7c5cff; --b:#00d4ff;
+    --ok:#2ee59d; --warn:#ff5c7a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Poppins',system-ui,sans-serif;color:var(--text);min-height:100vh;
+    background:radial-gradient(circle at 15% 20%,#2a1b6e 0,transparent 40%),
+               radial-gradient(circle at 85% 80%,#07506b 0,transparent 40%),var(--bg);
+    display:flex;flex-direction:column;align-items:center;padding:32px 16px;overflow-x:hidden;
+  }
+  .blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.35;z-index:-1;animation:float 12s ease-in-out infinite}
+  .blob.one{width:320px;height:320px;background:var(--a);top:-80px;left:-80px}
+  .blob.two{width:280px;height:280px;background:var(--b);bottom:-80px;right:-60px;animation-delay:-6s}
+  @keyframes float{50%{transform:translate(40px,30px) scale(1.1)}}
+
+  header{text-align:center;margin-bottom:28px}
+  .logo{font-size:44px;display:inline-block;animation:pulse 3s infinite}
+  @keyframes pulse{50%{transform:scale(1.12)}}
+  h1{font-size:clamp(28px,5vw,42px);font-weight:700;
+     background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--muted);margin-top:6px;font-size:15px}
+  .badges{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .badge{font-size:12px;padding:5px 12px;border:1px solid var(--border);border-radius:99px;background:var(--card);color:var(--muted)}
+
+  .card{
+    width:100%;max-width:760px;background:var(--card);border:1px solid var(--border);
+    border-radius:24px;padding:28px;backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.4);
+  }
+  .drop{
+    border:2px dashed var(--border);border-radius:18px;padding:36px 20px;text-align:center;
+    cursor:pointer;transition:.25s;position:relative;
+  }
+  .drop:hover,.drop.drag{border-color:var(--b);background:rgba(0,212,255,.07);transform:translateY(-2px)}
+  .drop .icon{font-size:46px}
+  .drop h3{margin:10px 0 4px;font-weight:600}
+  .drop p{color:var(--muted);font-size:13px}
+  input[type=file]{display:none}
+
+  .btn{
+    border:0;border-radius:14px;padding:13px 26px;font:600 15px 'Poppins',sans-serif;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,var(--a),var(--b));transition:.25s;
+    box-shadow:0 8px 24px rgba(124,92,255,.4);
+  }
+  .btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,212,255,.45)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .btn.ghost{background:transparent;border:1px solid var(--border);box-shadow:none;color:var(--text)}
+  .btn.ghost:hover:not(:disabled){border-color:var(--warn);color:var(--warn);box-shadow:none}
+  .actions{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+
+  .preview{display:none;margin-top:22px;animation:rise .5s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}}
+  .imgwrap{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--border);max-height:380px;display:flex;justify-content:center;background:#000}
+  .imgwrap img{max-width:100%;max-height:380px;object-fit:contain;display:block}
+  .scan{display:none;position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--b),transparent);
+        box-shadow:0 0 20px 6px var(--b);animation:scan 1.6s linear infinite}
+  .imgwrap.scanning .scan{display:block}
+  .imgwrap.scanning img{filter:brightness(.75)}
+  @keyframes scan{from{top:0}to{top:100%}}
+  .meta{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+
+  .result{display:none;margin-top:24px;padding:22px;border-radius:18px;border:1px solid var(--border);background:rgba(0,0,0,.25);animation:rise .5s ease}
+  .verdict{display:flex;align-items:center;gap:14px}
+  .verdict .emoji{font-size:40px}
+  .verdict h2{font-size:22px}
+  .verdict small{color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;padding:3px 10px;border-radius:99px;margin-left:8px;vertical-align:middle;font-weight:600}
+  .tag.pos{background:rgba(255,92,122,.18);color:var(--warn)}
+  .tag.neg{background:rgba(46,229,157,.18);color:var(--ok)}
+  .bars{margin-top:18px;display:grid;gap:12px}
+  .bar-row .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+  .track{height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .fill{height:100%;width:0;border-radius:99px;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .fill.pos{background:linear-gradient(90deg,#ff8a5c,var(--warn))}
+  .fill.neg{background:linear-gradient(90deg,#1fbf8a,var(--ok))}
+  .note{margin-top:14px;font-size:12px;color:#ffd166;display:none}
+
+  .disclaimer{max-width:760px;margin-top:22px;text-align:center;font-size:12px;color:var(--muted);line-height:1.6}
+  .tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;width:100%;max-width:760px;margin-top:22px}
+  .tip{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;font-size:12px;color:var(--muted);text-align:center}
+  .tip b{display:block;font-size:20px;margin-bottom:4px}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,120px);background:#2b1230;border:1px solid var(--warn);color:#ffd6de;
+         padding:12px 20px;border-radius:12px;font-size:14px;transition:.4s;z-index:10;max-width:90%}
+  #toast.show{transform:translate(-50%,0)}
+  footer{margin-top:26px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="blob one"></div><div class="blob two"></div>
+
+<header>
+  <div class="logo">🔬</div>
+  <h1>DermaScan AI</h1>
+  <p>Vitiligo detection from skin images using a Vision Transformer</p>
+  <div class="badges">
+    <span class="badge">🧠 ViT-Base / 16</span>
+    <span class="badge">⚡ FastAPI</span>
+    <span class="badge">🔒 Images are not stored</span>
+  </div>
+</header>
+
+<main class="card">
+  <label class="drop" id="drop" for="fileInput">
+    <div class="icon">📤</div>
+    <h3>Click to upload or drag &amp; drop</h3>
+    <p>JPG, PNG, WEBP or BMP · max 10 MB</p>
+  </label>
+  <input type="file" id="fileInput" accept="image/*">
+
+  <div class="preview" id="preview">
+    <div class="imgwrap" id="imgwrap">
+      <img id="previewImg" alt="Selected skin image">
+      <div class="scan"></div>
+    </div>
+    <div class="meta"><span id="fname"></span><span id="fsize"></span><span id="fdim"></span></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="analyzeBtn" disabled>🔍 Analyze Image</button>
+    <button class="btn ghost" id="resetBtn" style="display:none">✖ Clear</button>
+  </div>
+
+  <section class="result" id="result">
+    <div class="verdict">
+      <div class="emoji" id="emoji"></div>
+      <div>
+        <h2><span id="label"></span><span class="tag" id="tag"></span></h2>
+        <small id="confText"></small>
+      </div>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="note" id="note">⚠️ Low confidence. Try a clearer, well-lit, close-up photo of the skin area.</div>
+  </section>
+</main>
+
+<div class="tips">
+  <div class="tip"><b>💡</b>Use good natural lighting</div>
+  <div class="tip"><b>🎯</b>Keep the skin area in focus</div>
+  <div class="tip"><b>📏</b>Fill the frame with the area</div>
+  <div class="tip"><b>🚫</b>Avoid filters &amp; heavy edits</div>
+</div>
+
+<p class="disclaimer">
+  This tool is a student machine-learning project and is <strong>not a medical diagnosis</strong>.
+  The model only knows two classes (healthy skin vs. vitiligo), so it may give a confident answer even for unrelated images.
+  Please consult a dermatologist for any skin concern.
+</p>
+<footer>Built by Ali Jaffar · FAST-NUCES · Powered by PyTorch &amp; Hugging Face</footer>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fileInput=$('fileInput'), drop=$('drop'), analyzeBtn=$('analyzeBtn'), resetBtn=$('resetBtn');
+let currentFile=null;
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500)}
+function fmtSize(b){return b>1048576?(b/1048576).toFixed(2)+' MB':(b/1024).toFixed(1)+' KB'}
+
+function handleFile(file){
+  if(!file) return;
+  if(!file.type.startsWith('image/')) return toast('Please choose an image file.');
+  if(file.size>10*1024*1024) return toast('File is too large (max 10 MB).');
+  currentFile=file;
+  const url=URL.createObjectURL(file);
+  const img=$('previewImg');
+  img.onload=()=>{$('fdim').textContent=`📐 ${img.naturalWidth}×${img.naturalHeight}px`};
+  img.src=url;
+  $('fname').textContent='🖼️ '+(file.name.length>28?file.name.slice(0,25)+'…':file.name);
+  $('fsize').textContent='💾 '+fmtSize(file.size);
+  $('preview').style.display='block';
+  $('result').style.display='none';
+  analyzeBtn.disabled=false; resetBtn.style.display='inline-block';
+  drop.querySelector('h3').textContent='Choose a different image';
+}
+
+fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
+
+resetBtn.addEventListener('click',()=>{
+  currentFile=null; fileInput.value='';
+  $('preview').style.display='none'; $('result').style.display='none';
+  analyzeBtn.disabled=true; resetBtn.style.display='none';
+  drop.querySelector('h3').textContent='Click to upload or drag & drop';
+});
+
+analyzeBtn.addEventListener('click',async()=>{
+  if(!currentFile) return;
+  analyzeBtn.disabled=true;
+  analyzeBtn.innerHTML='<span class="spinner"></span>Analyzing…';
+  $('imgwrap').classList.add('scanning'); $('result').style.display='none';
+  const fd=new FormData(); fd.append('file',currentFile);
+  try{
+    const [res]=await Promise.all([fetch('/predict',{method:'POST',body:fd}), new Promise(r=>setTimeout(r,900))]);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.detail||'Prediction failed');
+    showResult(data);
+  }catch(err){ toast('❌ '+err.message); }
+  finally{
+    $('imgwrap').classList.remove('scanning');
+    analyzeBtn.disabled=false; analyzeBtn.innerHTML='🔍 Analyze Again';
+  }
+});
+
+const isPos = l => l.toLowerCase().includes('vitiligo');
+
+function showResult(d){
+  const pos=isPos(d.prediction);
+  $('emoji').textContent=pos?'⚠️':'✅';
+  $('label').textContent=d.prediction;
+  const tag=$('tag'); tag.textContent=pos?'Vitiligo pattern':'No vitiligo pattern'; tag.className='tag '+(pos?'pos':'neg');
+  $('confText').textContent=`Confidence: ${(d.confidence*100).toFixed(1)}%`;
+  $('bars').innerHTML=d.probabilities.map(p=>`
+    <div class="bar-row">
+      <div class="top"><span>${p.label}</span><span>${(p.probability*100).toFixed(1)}%</span></div>
+      <div class="track"><div class="fill ${isPos(p.label)?'pos':'neg'}" data-w="${(p.probability*100).toFixed(1)}"></div></div>
+    </div>`).join('');
+  $('note').style.display=d.confidence<0.7?'block':'none';
+  $('result').style.display='block';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>
+    document.querySelectorAll('.fill').forEach(f=>f.style.width=f.dataset.w+'%')));
+  $('result').scrollIntoView({behavior:'smooth',block:'center'});
+}
+</script>
+</body>
+</html>

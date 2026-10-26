@@ -1,0 +1,27 @@
+# Model weights and checkpoints (too large for GitHub)
+vitiligo_vit_model/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Dataset
+Vitiligo DS/
+data/
+dataset/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
